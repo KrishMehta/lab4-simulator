@@ -9,55 +9,71 @@ def get_bits(number, idx1, idx2):
 
 def execute(instruction, oldPC):
     """Handles a single instruction, returning the new PC"""
-    global M, R
+    global M, R, rsp
 
     reserved = get_bits(instruction, 7, 8)
     icode = get_bits(instruction, 4, 7)
     a = get_bits(instruction, 2, 4)
     b = get_bits(instruction, 0, 2)
 
-    if reserved == 1:
-        return oldPC
-    if icode == 0:
-        R[a] = R[b]
-    elif icode == 1:
-        R[a] += R[b]
-    elif icode == 2:
-        R[a] &= R[b]
-    elif icode == 3:
-        R[a] = M[R[b]]
-    elif icode == 4:
-        M[R[b]] = R[a]
-    elif icode == 5:
-        if b == 0:
-            R[a] = ~R[a]
-        elif b == 1:
-            R[a] = -R[a]
-        elif b == 2:
-            R[a] = not R[a]
-        elif b == 3:
-            R[a] = oldPC
-    elif icode == 6:
-        if b == 0:
-            R[a] = M[oldPC + 1]
-        elif b == 1:
-            R[a] += M[oldPC + 1]
-        elif b == 2:
-            R[a] &= M[oldPC + 1]
-        elif b == 3:
-            R[a] = M[M[oldPC + 1]]
-        return oldPC + 2
-    elif icode == 7:
-        if R[a] <= 0 or R[a] >= 0x80:
-            return R[b]
-
-    return oldPC + 1
+    if reserved == 0:
+        if icode == 0:
+            R[a] = R[b]
+        elif icode == 1:
+            R[a] += R[b]
+        elif icode == 2:
+            R[a] &= R[b]
+        elif icode == 3:
+            R[a] = M[R[b]]
+        elif icode == 4:
+            M[R[b]] = R[a]
+        elif icode == 5:
+            if b == 0:
+                R[a] = ~R[a]
+            elif b == 1:
+                R[a] = -R[a]
+            elif b == 2:
+                R[a] = not R[a]
+            elif b == 3:
+                R[a] = oldPC
+        elif icode == 6:
+            if b == 0:
+                R[a] = M[oldPC + 1]
+            elif b == 1:
+                R[a] += M[oldPC + 1]
+            elif b == 2:
+                R[a] &= M[oldPC + 1]
+            elif b == 3:
+                R[a] = M[M[oldPC + 1]]
+            return oldPC + 2
+        elif icode == 7:
+            if R[a] <= 0 or R[a] >= 0x80:
+                return R[b]
+        return oldPC + 1
+    elif reserved == 1:
+        if icode == 0:
+            if b == 0:
+                rsp -= 1
+                stack.append(R[a])
+            elif b == 1:
+                R[a] = stack.pop()
+                rsp += 1
+            elif b == 2:
+                stack.append(oldPC + 2)
+                return M[oldPC + 1]
+            elif b == 3:
+                return stack.pop()
+            return oldPC + 1
+        else:
+            return oldPC
 
 
 
 # initialize memory and registers
 R = [0 for i in range(4)]
 M = [0 for i in range(256)]
+rsp = 0xFF
+stack = []
 
 # initialize control registers; do not modify these directly
 _ir = 0
